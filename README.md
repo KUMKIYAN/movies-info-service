@@ -26,18 +26,18 @@ Spring boot uses recent versions of Junit. So it uses Junit5.
 
 ## Integration test
 
-    @WebFluxTest(controllers = FluxAndMonoController.class) on the top of the class - allows to access endpoints available in the controller
-    @AutoConfigureWebTestClient helps us to @Autowire the WebTestClient on top of the class
+@WebFluxTest(controllers = FluxAndMonoController.class) on the top of the class - allows to access endpoints available in the controller
+@AutoConfigureWebTestClient helps us to @Autowire the WebTestClient on top of the class
 
 ## Unit Testing
 
-    Unit testing is for testing interested classes / methods by mocking the dependancy layer
+Unit testing is for testing interested classes / methods by mocking the dependancy layer
 
 ### @DataMongoTest
-    @DataMongoTest  scan the application and look for repository classes and make that class available in your test case. We do not have to instantiate the whole spring application context in order to write an integration test for the database layer. We can test the application faster than starting from scratch.
+@DataMongoTest  scan the application and look for repository classes and make that class available in your test case. We do not have to instantiate the whole spring application context in order to write an integration test for the database layer. We can test the application faster than starting from scratch.
 
 ### @ActiveProfiles(“test”)
-    @ActiveProfiles(“test”)  will give connection to embedded mongo db. If we give @ActiveProfiles(“local”) will take the values from the application.yml file as this file contain local profile enusre test is not override
+@ActiveProfiles(“test”)  will give connection to embedded mongo db. If we give @ActiveProfiles(“local”) will take the values from the application.yml file as this file contain local profile enusre test is not override
 
 #### Whenever we are interact with reactive repository class it will return always Flux/Mono
 
@@ -47,4 +47,20 @@ standard way of testing anything is through unite or integration testing. Testin
 
 @SpringBootTest will spin up the application for testing. @ActiveProfie(“test”) will use embedded mongo db and @AutoConfigureWebTestClient give webTestClient to connect endpoints.
 
+### Unit Testing:
+
+Unit testing are faster compare to integration test
+
+unit Tests are hand for bean validation
+
+unit testing controller
+
+	@WebFluxTest(controllers = MoviesInfoController.class)
+	@AutoConfigureWebTestClient
+
+	
+for calling depenancy service methods that have parameter use IsA
+	
+    isA(MovieInfo.class)
+	isA(String.class)
 
