@@ -2,6 +2,7 @@ spring:
   profiles:
     active:local
 ---
+
 spring:
   config:
     activate:
@@ -12,6 +13,10 @@ spring:
       host: localhost
       port: 27017
       database: local
+
+logging:
+  level:
+    root: debug
 
 ---
 spring:

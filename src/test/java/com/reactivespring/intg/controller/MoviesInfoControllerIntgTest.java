@@ -10,7 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import reactor.test.StepVerifier;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +30,8 @@ public class MoviesInfoControllerIntgTest {
     private WebTestClient webTestClient;
 
     public static String MOVIE_INFO_URL = "/v1/movieinfos";
+
+    public static String MOVIE_NAME_INFO_URL = "/v1/movieinfos/movieName";
 
     @BeforeEach
     void setUp(){
@@ -99,5 +101,39 @@ public class MoviesInfoControllerIntgTest {
         webTestClient.get().uri(MOVIE_INFO_URL).exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBodyList(MovieInfo.class).hasSize(3);
+    }
+
+    @Test
+    void getAllMovieInfoByYear(){
+        var year = "2003";
+
+        var uri = UriComponentsBuilder.fromUriString(MOVIE_INFO_URL)
+                        .queryParam("year", year)
+                                .buildAndExpand().toUri();
+
+       webTestClient.get()
+               .uri(uri)
+               .exchange()
+               .expectStatus()
+               .is2xxSuccessful()
+               .expectBodyList(MovieInfo.class)
+               .hasSize(1);
+    }
+
+    @Test
+    void getMovieInfoByNamw(){
+        var name = "okkadu";
+
+        var uri = UriComponentsBuilder.fromUriString(MOVIE_NAME_INFO_URL)
+                .queryParam("name", name)
+                .buildAndExpand().toUri();
+
+        webTestClient.get()
+                .uri(uri)
+                .exchange()
+                .expectStatus()
+                .is2xxSuccessful()
+                .expectBodyList(MovieInfo.class)
+                .hasSize(1);
     }
 }

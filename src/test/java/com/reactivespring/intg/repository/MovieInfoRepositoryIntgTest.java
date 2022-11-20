@@ -82,6 +82,18 @@ public class MovieInfoRepositoryIntgTest {
         StepVerifier.create(movieInfo).expectNextCount(3).verifyComplete();
     }
 
+    @Test
+    void findByYear(){
+        var movieInfoFlux = movieInfoRepository.findByYear(2002);
+        StepVerifier.create(movieInfoFlux).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void findByMovieName(){
+        var movieInfoFlux = movieInfoRepository.findByName("simhadhri");
+        StepVerifier.create(movieInfoFlux).expectNextCount(1).verifyComplete();
+    }
+
 
 
 
