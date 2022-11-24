@@ -9,18 +9,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient //(timeout = "36000")
 public class MoviesInfoControllerIntgTest {
 
     @Autowired
@@ -43,7 +48,15 @@ public class MoviesInfoControllerIntgTest {
                 new MovieInfo("xyz", "shiva mani", 2002, List.of("nag", "amala"), LocalDate.parse("2005-06-01"))
         );
 
-        movieInfoRepository.saveAll(movieInfos).blockLast();
+       // movieInfoRepository.saveAll(movieInfos).blockLast();
+        movieInfoRepository
+                .deleteAll()
+                .thenMany(movieInfoRepository.saveAll(movieInfos))
+                .blockLast();
+
+        webTestClient = webTestClient.mutate()
+                .responseTimeout(Duration.ofMillis(30000))
+                .build();
     }
 
     @AfterEach
@@ -82,7 +95,7 @@ public class MoviesInfoControllerIntgTest {
     void updateMovieInfo(){
         var id = "xyz";
         var updatedMovieInfo =
-                new MovieInfo("null", "shiva mani", 2006, List.of("nag", "amala", "tabu"), LocalDate.parse("2006-07-18"));
+                new MovieInfo(null, "shiva mani", 2006, List.of("nag", "amala", "tabu"), LocalDate.parse("2006-07-18"));
 
         webTestClient.put().uri(MOVIE_INFO_URL+"/{id}", id).bodyValue(updatedMovieInfo).exchange().expectStatus()
                 .is2xxSuccessful().expectBody(MovieInfo.class).consumeWith(movieInfoEntityExchangeResult -> {
@@ -121,7 +134,7 @@ public class MoviesInfoControllerIntgTest {
     }
 
     @Test
-    void getMovieInfoByNamw(){
+    void getMovieInfoByName(){
         var name = "okkadu";
 
         var uri = UriComponentsBuilder.fromUriString(MOVIE_NAME_INFO_URL)
@@ -135,5 +148,82 @@ public class MoviesInfoControllerIntgTest {
                 .is2xxSuccessful()
                 .expectBodyList(MovieInfo.class)
                 .hasSize(1);
+    }
+
+    @Test
+    void getMovieInfo_stream() {
+
+        var newMovieInfo =
+                new MovieInfo(null, "shiva mani 2", 2006, List.of("nag", "amala", "tabu"), LocalDate.parse("2006-07-18"));
+
+        webTestClient.post()
+                .uri(MOVIE_INFO_URL)
+                .bodyValue(newMovieInfo)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody(MovieInfo.class)
+                .consumeWith(entityExchangeResultConsumer -> {
+                    var response = entityExchangeResultConsumer.getResponseBody();
+                    assert response != null;
+                    assert response.getMovieInfoId() != null;
+
+                });
+
+            var moviesStreamFlux = webTestClient
+                    .get()
+                    .uri(MOVIE_INFO_URL + "/stream")
+                    .exchange()
+                    .expectStatus()
+                    .is2xxSuccessful()
+                    .returnResult(MovieInfo.class)
+                    .getResponseBody();
+
+            StepVerifier.create(moviesStreamFlux)
+                    .assertNext(movieInfo1 -> {
+                        assert movieInfo1.getMovieInfoId() != null;
+                    })
+                    .thenCancel()
+                    .verify();
+
+
+    }
+
+    @Test
+    void getAllMovieInfos_Stream1() {
+
+        var movieInfo = new MovieInfo(null, "Batman Begins",
+                2005, List.of("Christian Bale", "Michael Cane"), LocalDate.parse("2005-06-15"));
+
+        webTestClient
+                .post()
+                .uri(MOVIE_INFO_URL)
+                .bodyValue(movieInfo)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody(MovieInfo.class)
+                .consumeWith(movieInfoEntityExchangeResult -> {
+                    var savedMovieInfo = movieInfoEntityExchangeResult.getResponseBody();
+                    assert Objects.requireNonNull(savedMovieInfo).getMovieInfoId() != null;
+
+                });
+
+        var moviesStreamFlux = webTestClient
+                .get()
+                .uri(MOVIE_INFO_URL + "/stream")
+                .exchange()
+                .expectStatus()
+                .is2xxSuccessful()
+                .returnResult(MovieInfo.class)
+                .getResponseBody();
+
+
+        StepVerifier.create(moviesStreamFlux)
+                .assertNext(movieInfo1 -> {
+                    assert movieInfo1.getMovieInfoId()!=null;
+                })
+                .thenCancel()
+                .verify();
     }
 }

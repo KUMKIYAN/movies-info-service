@@ -1,13 +1,16 @@
 package com.reactivespring.controller;
 
 import com.reactivespring.domain.MovieInfo;
+import com.reactivespring.exceptions.MovieInfoNotFoundException;
 import com.reactivespring.service.MovieInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import javax.validation.Valid;
 
@@ -17,6 +20,8 @@ import javax.validation.Valid;
 public class MovieInfoController {
     private MovieInfoService movieInfoService;
 
+    Sinks.Many<MovieInfo> movieInfoSink = Sinks.many().replay().all();
+
     public MovieInfoController(MovieInfoService movieInfoService) {
         this.movieInfoService = movieInfoService;
     }
@@ -24,13 +29,22 @@ public class MovieInfoController {
     @PostMapping("/movieinfos")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<MovieInfo> addMovieInfo(@RequestBody @Valid MovieInfo movieInfo){
-        return movieInfoService.addMovieInfo(movieInfo).log();
+        return movieInfoService.addMovieInfo(movieInfo)
+                .doOnNext(saveInfo -> movieInfoSink.tryEmitNext(saveInfo));
     }
 
-//    @GetMapping("/movieinfos")
-//    public Flux<MovieInfo> getAllMovieInfos(){
-//        return movieInfoService.getAllMovieInfos().log();
-//    }
+    //    @GetMapping("/movieinfos")
+    //    public Flux<MovieInfo> getAllMovieInfos(){
+    //        return movieInfoService.getAllMovieInfos().log();
+    //    }
+
+    // This will work as streaming. Server sent event work as real time live data.
+    // Like uber car location or cricket score.
+
+    @GetMapping(value = "/movieinfos/stream", produces = MediaType.APPLICATION_NDJSON_VALUE)
+    public Flux<MovieInfo> streamMovieInfos(){
+        return movieInfoSink.asFlux();
+    }
 
     @GetMapping("/movieinfos")
     public Flux<MovieInfo> getAllMovieInfos(@RequestParam(value = "year", required = false) Integer year){
@@ -59,7 +73,8 @@ public class MovieInfoController {
     public Mono<ResponseEntity<MovieInfo>> updateMovieById(@RequestBody MovieInfo updatedMovieInfo, @PathVariable String id){
         return movieInfoService.updateMovieInfoById(updatedMovieInfo, id)
                 .map(ResponseEntity.ok()::body)
-                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build())).log();
+                .switchIfEmpty(Mono.error(new MovieInfoNotFoundException("MovieInfo Not Found")));
+                //.switchIfEmpty(Mono.just(ResponseEntity.notFound().build())).log();
     }
 
     @DeleteMapping("/movieinfos/{id}")
